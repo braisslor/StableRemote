@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html><head> 
+	<meta content="yes" name="apple-mobile-web-app-capable" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+	<meta name="viewport" content="initial-scale=1.0">
+	
+	<link href="css/jquery-ui.css" type ="text/css" rel="stylesheet" />
+	<link href="css/prettyPhone.css" type ="text/css" rel="stylesheet" />
+	<link rel="apple-touch-icon" href="apple-touch-icon-precomposed.png"/>
+	<script src='js/jquery.min.js'></script>
+	<script src='js/jquery-ui.min.js'></script>
+	
+	<style> 
+		#slider { 
+			margin: 20px;
+		} 
+		.slider_wrapper {
+			background: #000;
+		}
+	</style>
+	<script>
+		//<script id='ip_id' type='text/javascript' src="http://www.codehelper.io/api/ips/?js">
+		var roVar = 2;
+		var outVar = 2;
+		var WANIP='';
+		var LANIP='192.168.10.201';
+		var newIp = "";
+		var lastIp = "";
+		var ipText="";
+		function changeLight(event, ui) { 
+			document.getElementById('t').innerHTML='<center>Sending';
+			setTimeout(function(){document.getElementById('t').innerHTML='<center>Control the Fan!'},450);
+			$.post(ipText, { ro: roVar, li: ui.value } );
+			updateIPText(); 
+		}
+		$(document).ready(
+			function(){ 
+				
+				roVar = 2; //This is for living room at my house currently. Not permanent
+				$('#slider').slider({min: 1, max:19, value:10, change:changeLight}); 
+				updateIPText();
+				}
+		);
+		function updateIPText(butVal) {
+			$.getJSON( "http://smart-ip.net/geoip-json?callback=?",
+			function(data){
+				newIp = data.host;
+				}
+			);
+			$.getJSON( "http://smart-ip.net/geoip-json/myarduino.hopto.org?callback=?",
+			function(data){
+				WANIP = data.host;
+				}
+			);
+			//If my current IP and the WANIP are the same then i'm on the same network as the uController
+			if (newIp == WANIP) {
+				lastIp = newIp;
+				ipText = 'http://' + LANIP + '/';
+				document.getElementById('loc').innerHTML="On Home WIFI";
+			} else {
+				lastIp = newIp;
+				ipText = 'http://' + WANIP + ':245/';
+				document.getElementById('loc').innerHTML="Not on Home WIFI";
+			}
+				//document.getElementById('n').innerHTML="Waiting";
+			setTimeout(
+				function () { 
+					if (lastIp != newIp) { 
+						if (newIp == WANIP) {
+						lastIp = newIp;
+						ipText = 'http://' + LANIP + '/';
+						document.getElementById('loc').innerHTML="On Home WIFI";
+					} else {
+					lastIp = newIp;
+					ipText = 'http://' + WANIP + ':245/';
+					document.getElementById('loc').innerHTML="Not on Home WIFI";
+					$.post(ipText, { ro: roVar, li: butVal} );
+					}
+					//document.getElementById('n').innerHTML="Resending";
+					
+					}
+					}, 750);
+			
+		}
+		function changeOutlet(outNum) { 
+			outVar = outNum;
+		}
+		function sendOutlet(incVal) {
+			document.getElementById('title').innerHTML='<center>Sending';
+			updateIPText(incVal);
+			setTimeout(function(){document.getElementById('title').innerHTML='<center>Control the Fan!'},450);
+			if(outVar <5) {
+				outVar = outVar + incVal;	
+				$.post(ipText + 'outlet' ,  {ou: outVar} ); 
+				outVar = outVar - incVal;
+			} else {
+				$.post(ipText + 'outlet' ,  {ou: outVar} ); 
+			}
+			
+		}
+			
+		function butPressed(butVal) {
+			document.getElementById('title').innerHTML='<center>Sending';
+			updateIPText(butVal);
+			setTimeout(function(){document.getElementById('title').innerHTML='<center>Control the Fan!'},450);
+			$.post(ipText, { ro: roVar, li: butVal} );
+		}
+		function changeRoom(roNum) { 
+			roVar = roNum;
+		}	
+	</script>
+</head>
+<body>
+	<div id="topbar">
+		<div id="title">Control the Fan!</div>
+	</div>
+	<div id="content">
+		<center>
+		<form>
+		<fieldset>
+		<legend><center>Room</center></legend>		          
+          <input type = "radio"
+                 name = "room"
+                 id = "roomBed"
+                 onchange = changeRoom(1);
+                  />
+          <label>Bed Room</label>
+          
+          <input type = "radio"
+                 name = "room"
+                 id = "roomLiving"
+                 checked = "checked"
+                 onchange = changeRoom(2);
+                 />
+          <label>Living Room</label>
+               
+		</fieldset>     
+		</form>
+		<button onclick='butPressed(21)'>LIGHT</button>
+		<div id="slider" value=10></div>
+		<h1>Fan:</h1>
+		<button onclick='butPressed(22)'>OFF</button>
+		<button onclick='butPressed(23)'>LOW</button>
+		<button onclick='butPressed(24)'>MED</button>
+		<button onclick='butPressed(25)'>HIGH</button><br><br>
+		<text id='loc'> </text></center>
+	</div>
+	<div id="content">
+		<center>
+		<form>
+		<fieldset>
+		<legend><center>Outlets</center></legend>
+		  <input type = "radio"
+                 name = "outlet"
+                 id = "outTrees"
+                 onchange = changeOutlet(0);
+                  />
+          <label>Trees</label>
+          
+          <input type = "radio"
+                 name = "outlet"
+                 id = "fanOutlet"
+                 checked = "checked"
+                 onchange = changeOutlet(2);
+                 />
+          <label>Fan</label>
+          <input type = "radio"
+                 name = "outlet"
+                 id = "houseOutlet"
+                 onchange = changeOutlet(4);
+                 />
+          <label>House Lights</label>
+              
+		</fieldset>     
+		</form>
+		<pre><button onclick='sendOutlet(1)'>Turn On</button>          <button onclick='sendOutlet(0)'>Turn Off</button></pre>
+	</div>
+</body></html>
